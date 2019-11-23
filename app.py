@@ -1,14 +1,18 @@
+#!/usr/bin/python3
+
 import os
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
-from flask import request
+from flask import request, redirect
 from Crypto.PublicKey import RSA
 import base64
 from uuid import uuid4
 import jwt
 from datetime import timezone, datetime
 import requests
+import urllib.parse as urlparse
+from urllib.parse import urlencode
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 app.config['SQLALCHEMY_DATABASE_URI'] = str(os.getenv("DATABASE_URI", 'sqlite:///test.db'))
@@ -38,23 +42,41 @@ class KeyPair(db.Model):
 
 @app.route("/login", methods=["GET"])
 def login():
-    return render_template("login.html")
+    redirect_uri = request.args.get('redirect_uri')
+
+    if not redirect_uri:
+        return "Redirect URI not specified"
+
+    return render_template("login.html", redirect_uri=redirect_uri)
 
 @app.route("/login", methods=["POST"])
 def login_post():
     email = request.form['email']
     password = request.form['password']
+    redirect_uri = request.form['redirect_uri']
+
+    if not redirect_uri:
+        return "Redirect URI not specified"
+
     user = User.query.filter_by(email=email).first()
 
     if (user != None):
         hash = user.password
         valid = bcrypt.check_password_hash(hash, password)
         if (valid):
-            return create_jwt(user)
+            token = create_jwt(user)
+            url_parts = list(urlparse.urlparse(redirect_uri))
+            query = dict(urlparse.parse_qsl(url_parts[4]))
+            query.update({'token': token})
+
+            url_parts[4] = urlencode(query)
+            redirect_to = urlparse.urlunparse(url_parts)
+
+            return redirect(redirect_to, code=302)
         else:
-            return render_template("login.html", error = "Invalid email and/or password")
+            return render_template("login.html", error = "Invalid email and/or password", redirect_uri=redirect_uri)
     else:
-        return render_template("login.html", error="Invalid email and/or password")
+        return render_template("login.html", error="Invalid email and/or password", redirect_uri=redirect_uri)
 
 def create_jwt(user):
     global active_jwt_key
@@ -76,20 +98,30 @@ def create_jwt(user):
 
 @app.route("/register", methods=["GET"])
 def register():
-    return render_template("register.html")
+    redirect_uri = request.args.get('redirect_uri')
+    return render_template("register.html", redirect_uri=redirect_uri)
 
 @app.route("/register", methods=["POST"])
 def register_post():
     name = request.form['name']
     email = request.form['email']
     password = request.form['password']
+    redirect_uri = request.form['redirect_uri']
 
     hashedPassword = bcrypt.generate_password_hash(password)
 
     user = User(name=name, email=email, password=hashedPassword)
-    db.session.add(user)
-    db.session.commit()
-    return "OK"
+
+    try:
+        db.session.add(user)
+        db.session.commit()
+
+        if not redirect_uri:
+            return redirect('/login')
+        else:
+            return redirect('/login?redirect_uri=' + urlencode(redirect_uri))
+    except:
+        return render_template("register.html", redirect_uri=redirect_uri, error="Email already registered")
 
 def generate_key():
     key = RSA.generate(2048)

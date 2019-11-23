@@ -41,9 +41,10 @@
     <input type="text" id="inputEmail" name="email" class="form-control" placeholder="Email" required autofocus>
     <label for="inputPassword" class="sr-only">Password</label>
     <input type="password" id="inputPassword" name="password" class="form-control" placeholder="Password" required>
+    <input type="hidden" name="redirect_uri" value="{{ redirect_uri }}" />
     <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
     <div style="height: 16px"></div>
-    <a href="/register">Register</a>
+    <a href="/register?redirect_uri={{ redirect_uri|urlencode|replace("/", "%2f") }}">Register</a>
 </form>
 </body>
 </html>

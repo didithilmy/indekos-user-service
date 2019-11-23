@@ -4,3 +4,4 @@ Flask-Bcrypt
 PyJWT
 cryptography
 requests
+pycrypto
