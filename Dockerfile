@@ -3,4 +3,4 @@ EXPOSE 5000
 WORKDIR /code
 COPY . /code
 RUN pip install -r requirements.txt
-CMD [ "python", "-u", "flask run" ]
+CMD [ "python", "-u", "app.py" ]

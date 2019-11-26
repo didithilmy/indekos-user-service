@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import os
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
@@ -26,6 +24,7 @@ class User(db.Model):
     name = db.Column(db.String(80), unique=False, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120), unique=False, nullable=False)
+    isAdmin = db.Column(db.Boolean, nullable=False)
 
     def __repr__(self):
         return '<User %r>' % self.email
@@ -90,7 +89,8 @@ def create_jwt(user):
         'email': user.email,
         'sub': user.id,
         'iat': iat,
-        'exp': iat + 3600
+        'exp': iat + 3600,
+        'is_admin': user.isAdmin
     }
 
     return jwt.encode(payload, key.exportKey("PEM"), algorithm='RS256', headers={'kid': kid})
@@ -154,4 +154,7 @@ def init():
     db.create_all()
     get_active_key()
 
-init()
+
+if __name__ == '__main__':
+    init()
+    app.run(debug=True, host='0.0.0.0')
