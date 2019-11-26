@@ -110,7 +110,7 @@ def register_post():
 
     hashedPassword = bcrypt.generate_password_hash(password)
 
-    user = User(name=name, email=email, password=hashedPassword)
+    user = User(name=name, email=email, password=hashedPassword, isAdmin=False)
 
     try:
         db.session.add(user)
@@ -120,7 +120,8 @@ def register_post():
             return redirect('/login')
         else:
             return redirect('/login?redirect_uri=' + urlencode(redirect_uri))
-    except:
+    except Exception as error:
+        print('Error', error)
         return render_template("register.html", redirect_uri=redirect_uri, error="Email already registered")
 
 def generate_key():
