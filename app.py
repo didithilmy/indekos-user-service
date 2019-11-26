@@ -10,10 +10,11 @@ import jwt
 from datetime import timezone, datetime
 import requests
 import urllib.parse as urlparse
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote_plus
+import traceback
 
 app = Flask(__name__, static_folder='static', static_url_path='')
-app.config['SQLALCHEMY_DATABASE_URI'] = str(os.getenv("DATABASE_URI", 'sqlite:///test.db'))
+app.config['SQLALCHEMY_DATABASE_URI'] = str(os.getenv("DATABASE_URI", 'mysql://root:kartin1-2017@localhost/tst_user'))
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 
@@ -99,6 +100,10 @@ def create_jwt(user):
 @app.route("/register", methods=["GET"])
 def register():
     redirect_uri = request.args.get('redirect_uri')
+
+    if (not redirect_uri):
+        redirect_uri = ''
+
     return render_template("register.html", redirect_uri=redirect_uri)
 
 @app.route("/register", methods=["POST"])
@@ -106,7 +111,7 @@ def register_post():
     name = request.form['name']
     email = request.form['email']
     password = request.form['password']
-    redirect_uri = request.form['redirect_uri']
+    redirect_uri = str(request.form['redirect_uri'])
 
     hashedPassword = bcrypt.generate_password_hash(password)
 
@@ -119,9 +124,9 @@ def register_post():
         if not redirect_uri:
             return redirect('/login')
         else:
-            return redirect('/login?redirect_uri=' + urlencode(redirect_uri))
-    except Exception as error:
-        print('Error', error)
+            return redirect('/login?redirect_uri=' + quote_plus(redirect_uri))
+    except Exception:
+        print(traceback.format_exc())
         return render_template("register.html", redirect_uri=redirect_uri, error="Email already registered")
 
 def generate_key():
